@@ -1,11 +1,38 @@
 # Whoiser change log
 
-#### 1.13.3 - 1 December 2022
+#### 1.18.0 - 4 August 2024
+
+- Added - Parse & normalize WHOIS data for .fr
+
+#### 1.17.2 - 5 February 2024
+
+- Fixed - Properly parse WHOIS data on multi lines for .eu TLD
+
+#### 1.17.0 - 21 April 2023
+
+- Fixed - Code syntax to allow strict [#99](https://github.com/LayeredStudio/whoiser/pull/99)
+- Updated - Detect more redacted data in domain WHOIS
+
+#### 1.16.0 - 6 February 2023
+
+- Added - Option to show/hide domain WHOIS protected data [#96](https://github.com/LayeredStudio/whoiser/pull/96)
+- Fixed - Include `punycode` from userland lib [a2ee6f9](https://github.com/LayeredStudio/whoiser/commit/a2ee6f9d338ff44aeaf57d61adde3df454ff2d07)
+- Fixed - Query WHOIS for .de with umlaut in both ASCII/Unicode [5a7ffd1](https://github.com/LayeredStudio/whoiser/commit/5a7ffd133a4a11d8fd701b4b4d65a033c81012a8)
+
+#### 1.15.0 - 4 February 2023
+
+- Updated - Improved .it parsing, preserve date structure and more [#92](https://github.com/LayeredStudio/whoiser/pull/92)
+- Updated - Merge/normalize more WHOIS domain labels
+- Fixed - Uses raw domain for .de TLD in `whoisDomain` [#95](https://github.com/LayeredStudio/whoiser/pull/95)
+- Fixed - Query more sources for TLD whois server [#86](https://github.com/LayeredStudio/whoiser/pull/86)
+
+#### 1.14.0 - 14 January 2023
 
 - Added - Support for third level domains [#80](https://github.com/LayeredStudio/whoiser/pull/80)
 - Added - Additional support for TLDs not in the IANA database [#80](https://github.com/LayeredStudio/whoiser/pull/80)
 - Fixed - Follow RIPE referrals [#80](https://github.com/LayeredStudio/whoiser/pull/80)
 - Fixed - Parse .gg, .je, and .as whois data correctly [#80](https://github.com/LayeredStudio/whoiser/pull/80)
+- Fixed - Improved parser for .it whois data [#84](https://github.com/LayeredStudio/whoiser/pull/84)
 
 #### 1.13.2 - 28 November 2022
 

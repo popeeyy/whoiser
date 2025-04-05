@@ -96,7 +96,7 @@ const parseSimpleWhois = (whois) => {
 			} else if (isGroup) {
 				data[isGroup] = group
 			} else {
-				for (key in group) {
+				for (const key in group) {
 					const label = renameLabels[key] || key
 					data[label] = group[key]
 				}
@@ -109,18 +109,25 @@ const parseSimpleWhois = (whois) => {
 	return data
 }
 
-const parseDomainWhois = (domain, whois) => {
+const parseDomainWhois = (domain, whois, ignorePrivacy) => {
 	// Text saying there's no useful data in a field
 	const noData = [
 		'-',
 		'.',
+		'n/a',
+		'no data',
+		'redacted',
+		'privado',
+		'datos privados',
 		'data protected',
 		'not disclosed',
 		'data protected, not disclosed',
 		'data redacted',
 		'not disclosed not disclosed',
+		'not disclosed! visit www.eurid.eu for webbased whois.',
 		'not available',
 		'redacted for privacy',
+		'redacted | eu data subject',
 		'gdpr redacted',
 		'non-public data',
 		'gdpr masked',
@@ -138,6 +145,7 @@ const parseDomainWhois = (domain, whois) => {
 		'redacted for gdpr',
 		'redacted redacted',
 		'not available from registry',
+		'hidden upon user request',
 	]
 
 	// WHOIS labels to rename. "From" must be lowercase
@@ -158,11 +166,13 @@ const parseDomainWhois = (domain, whois) => {
 		hostname: 'Name Server',
 		'domain nameservers': 'Name Server',
 		'domain servers in listed order': 'Name Server', // found in .ly
+		'domain servers': 'Name Server', // found in .tr
 		'name servers dns': 'Name Server', // found in .mx
 		flags: 'Domain Status',
 		status: 'Domain Status',
 		state: 'Domain Status', // found in .ru
 		'registration status': 'Domain Status',
+		'eppstatus': 'Domain Status', // found in .fr
 		'sponsoring registrar iana id': 'Registrar IANA ID',
 		organisation: 'Registrar',
 		registrar: 'Registrar',
@@ -171,8 +181,10 @@ const parseDomainWhois = (domain, whois) => {
 		'registrar............': 'Registrar', // found in .ax
 		'record maintained by': 'Registrar',
 		'sponsoring registrar': 'Registrar',
+		'registrar organization name': 'Registrar', // found in .tr
 		url: 'Registrar URL',
 		'registrar website': 'Registrar URL',
+		'registrar web': 'Registrar URL', // found in .it
 		'www..................': 'Registrar URL', // found in .ax
 		'mnt-by': 'Registrar ID', // found in .ua
 		'creation date': 'Created Date',
@@ -181,6 +193,7 @@ const parseDomainWhois = (domain, whois) => {
 		'relevant dates registered on': 'Created Date',
 		created: 'Created Date',
 		'created on': 'Created Date', // found in .mx
+		'additional info created on..............': 'Created Date', // found in .tr
 		'registration time': 'Created Date',
 		registered: 'Created Date',
 		'created..............': 'Created Date', // found in .ax
@@ -195,6 +208,7 @@ const parseDomainWhois = (domain, whois) => {
 		'relevant dates last updated': 'Updated Date', // found in .uk, .co.uk
 		'last updated on': 'Updated Date', // found in .mx
 		'last update': 'Updated Date', // found in .co.jp
+		'last-update': 'Updated Date', // found in .fr
 		'registrar registration expiration date': 'Expiry Date',
 		'registry expiry date': 'Expiry Date',
 		'expires on': 'Expiry Date',
@@ -203,18 +217,29 @@ const parseDomainWhois = (domain, whois) => {
 		'expire date': 'Expiry Date',
 		'expiration date': 'Expiry Date',
 		'expires..............': 'Expiry Date', // found in .ax
+		'additional info expires on..............': 'Expiry Date', // found in .tr
 		'paid-till': 'Expiry Date',
 		'expiry date': 'Expiry Date',
 		expire: 'Expiry Date',
 		'relevant dates expiry date': 'Expiry Date', // found in .uk, .co.uk
 		'record will expire on': 'Expiry Date',
 		expired: 'Expiry Date', // found in .ly
-		registrant: 'Registrant Name',
+		'registry registrantid': 'Registry Registrant ID', // found in .ai
+		registrant: 'Registrant Name', // found in .ai
+		'registrant contact': 'Registrant Name',
 		'registrant contact name': 'Registrant Name',
+		registrantname: 'Registrant Name', // found in .ai
 		'registrant person': 'Registrant Name', // found in .ua
 		'registrant email': 'Registrant Email', // found in .ua
+		'registrant e-mail': 'Registrant Email', // found in .fr
 		'registrant contact email': 'Registrant Email',
+		registrantemail: 'Registrant Email', // found in .ai
+		registrantstreet: 'Registrant Street', // found in .ai
+		registrantcity: 'Registrant City', // found in .ai
+		registrantcountry: 'Registrant Country', // found in .ai
+		'registrant country': 'Registrant Country', // found in .fr
 		'registrant organisation': 'Registrant Organization',
+		registrantphone: 'Registrant Phone',
 		'trading as': 'Registrant Organization', // found in .uk, .co.uk
 		org: 'Registrant Organization', // found in .ru
 		'registrant state': 'Registrant State/Province',
@@ -294,6 +319,16 @@ const parseDomainWhois = (domain, whois) => {
 		lines = handleJpLines(lines)
 	}
 
+	if (domain.endsWith('.it')) {
+		lines = handleDotIt(lines)
+	} else if (domain.endsWith('.fr')) {
+		lines = handleDotFr(lines)
+	}
+
+	if (domain.endsWith('.tr')) {
+		lines = handleDotTr(lines)
+	}
+
 	lines = lines.map((l) => l.trim())
 
 	lines.forEach((line) => {
@@ -313,7 +348,7 @@ const parseDomainWhois = (domain, whois) => {
 			}
 
 			// remove redacted data
-			if (noData.includes(value.toLowerCase())) {
+			if (ignorePrivacy && noData.includes(value.toLowerCase())) {
 				value = ''
 			}
 
@@ -354,6 +389,51 @@ const parseDomainWhois = (domain, whois) => {
 	return data
 }
 
+const handleDotTr = (lines) => {
+	lines = lines.filter((line) => line.trim() !== '') // Remove blank lines
+
+	const registrantLines = ['Name', undefined, undefined, undefined, undefined] // No clue what the other 4 fields are, all domains have them hidden
+	const replacement = []
+	let section = ''
+	let sectionLine = 0
+
+	for (let line of lines) {
+		line = line.replace(/\s+/g, ' ').replace(' :', ':').trim()
+
+		if (line.startsWith('** Domain')) {
+			// Keep line for domain name/nameservers
+			line = line.replace('** ', '')
+		} else if (line.includes('** ')) {
+			// Start new section
+			section = line.replace(':', '').replace('** ', '').trim()
+			sectionLine = 0
+			continue
+		} else if (section === 'Registrant') {
+			// Add registrant info
+			if (!registrantLines[sectionLine]) continue
+
+			line = `Registrant ${registrantLines[sectionLine]}: ${line}`
+			sectionLine++
+		} else if (!line.includes(': ')) {
+			// Add multi-line information to one line (nameservers and address)
+			replacement[replacement.length - 1] += ` ${line}`
+			continue
+		} else if (section) {
+			// Append section name to each line
+			line = `${section} ${line}`
+		}
+
+		// Remove period at end of dates
+		if (section === 'Additional Info') {
+			line = line.replace(/\.$/, '')
+		}
+
+		replacement.push(line)
+	}
+
+	return replacement
+}
+
 const handleDotUa = (lines) => {
 	const types = ['Registrar', 'Registrant', 'Admin', 'Technical']
 	let flag = ''
@@ -371,6 +451,46 @@ const handleDotUa = (lines) => {
 	return lines
 }
 
+const handleDotIt = (lines) => {
+	let section = ''
+	const replacement = []
+
+	for (let line of lines) {
+		// Ignore comments and empty lines
+		if (line.startsWith('*') || line === '') {
+			continue
+		}
+
+		// Collapse whitespace
+		const collapsed = line.replace(/\s+/g, ' ').trim()
+
+		// Check for top-level values and new section indicators
+		if (/^[^\s]/.test(line)) {
+			if (line.includes(':')) {
+				replacement.push(collapsed)
+			} else {
+				// Special handling for "Nameservers" section
+				if (line === 'Nameservers') {
+					section = 'Name Server:'
+				} else {
+					section = collapsed
+				}
+			}
+		}
+
+		// Make sure sub-section lines are properly labeled
+		if (/^\s{2}[^\s]/.test(line)) {
+			// New sub-section
+			replacement.push(`${section} ${collapsed}`)
+		} else if (/^\s{4}/.test(line)) {
+			// Continuation of previous line
+			replacement[replacement.length - 1] += `, ${collapsed}`
+		}
+	}
+
+	return replacement
+}
+
 // Fix "label: \n value" format
 const handleMultiLines = (lines) => {
 	lines.forEach((line, index) => {
@@ -379,7 +499,7 @@ const handleMultiLines = (lines) => {
 			let addedLabel = false
 
 			// Check next lines
-			for (let i = 1; i <= 5; i++) {
+			for (let i = 1; i <= 8; i++) {
 				// if no line or empty line
 				if (!lines[index + i] || !lines[index + i].trim().length) {
 					break
@@ -434,6 +554,82 @@ const handleJpLines = (lines) => {
 		}
 	}
 	return ret.map((line) => line.replace(/\[(.*?)\]/g, '$1:'))
+}
+
+/**
+ * Normalize WHOIS data for .fr ccTld, make it look more like gTLDs
+ * 
+ * @param {string[]} lines 
+ * @returns
+ */
+function handleDotFr(lines) {
+	const groups = []
+	let group = []
+	const finalLines = []
+
+	// split data in groups
+	lines.forEach(line => {
+		if (line.startsWith('%')) {
+			finalLines.push(line)
+		} else if (!line.trim().length && group.length) {
+			// start new group
+			groups.push(group)
+			group = []
+		} else if (line.trim().length && !line.startsWith('source')) {
+			group.push(splitStringBy(line, line.indexOf(':')).map(str => str.trim()))
+		}
+	})
+
+	if (group.length) {
+		groups.push(group)
+	}
+
+	groups.forEach(gr => {
+		if (gr[0][0] === 'domain') {
+			// group with domain info
+			gr.forEach(line => {
+				if (line[0] !== 'status') {
+					finalLines.push(line.join(': '))
+				}
+			})
+		} else if (gr[0][0] === 'registrar') {
+			// group with Registrar info
+			gr.forEach(([label, value]) => {
+				if (label === 'registrar') {
+					finalLines.push(`${label}: ${value}`)
+				} else {
+					finalLines.push(`registrar ${label}: ${value}`)
+				}
+			})
+		} else if (gr[0][0] === 'nic-hdl') {
+			let contactType = ''
+			const contactTypeLine = finalLines.find(line => line.includes(gr[0][1]))
+
+			if (contactTypeLine.startsWith('admin-c')) {
+				contactType = 'admin'
+			} else if (contactTypeLine.startsWith('holder-c')) {
+				contactType = 'registrant'
+			} else if (contactTypeLine.startsWith('tech-c')) {
+				contactType = 'technical'
+			}
+
+			// group with contact info
+			gr.forEach(([label, value]) => {
+				if (label === 'nic-hdl') {
+					finalLines.push(`${contactType} registry id: ${value}`)
+				} else {
+					finalLines.push(`${contactType} ${label}: ${value}`)
+				}
+			})
+		} else {
+			gr.forEach(line => {
+				finalLines.push(line.join(': '))
+			})
+		}
+
+	})
+
+	return finalLines
 }
 
 // Handle formats like this:

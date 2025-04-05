@@ -1,5 +1,5 @@
 {
-  "name": "whoiser",
+  "name": "whoiser-fork",
   "version": "1.17.2",
   "description": "Whois info for TLDs, domains and IPs",
   "types": "./index.d.ts",

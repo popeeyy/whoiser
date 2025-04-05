@@ -93,8 +93,8 @@ const whoisTldAlternate = async (query) => {
 	return whoisSrv?.value?.[0]?.name ?? whoisCname?.value?.[0] // Get whois server from results
 }
 
-const whoisTld = async (query, { timeout = 15000, raw = false, domainTld = '' } = {}) => {
-	const result = await whoisQuery({ host: 'whois.iana.org', query, timeout })
+const whoisTld = async (query, { timeout = 15000, raw = false, domainTld = '', queryServer = whoisQuery } = {}) => {
+	const result = await queryServer({ host: 'whois.iana.org', query, timeout })
 	const data = parseSimpleWhois(result)
 
 	if (raw) {
@@ -122,7 +122,7 @@ const whoisTld = async (query, { timeout = 15000, raw = false, domainTld = '' } 
 	return data
 }
 
-const whoisDomain = async (domain, { host = null, timeout = 15000, follow = 2, raw = false, ignorePrivacy = true } = {}) => {
+const whoisDomain = async (domain, { host = null, timeout = 15000, follow = 2, raw = false, ignorePrivacy = true, queryServer = whoisQuery } = {}) => {
 	domain = punycode.toASCII(domain)
 	const [domainName, domainTld] = splitStringBy(domain.toLowerCase(), domain.lastIndexOf('.'))
 	let results = {}
@@ -134,7 +134,7 @@ const whoisDomain = async (domain, { host = null, timeout = 15000, follow = 2, r
 
 	// find WHOIS server for TLD
 	if (!host) {
-		const tld = await whoisTld(domain, { timeout, domainName, domainTld })
+		const tld = await whoisTld(domain, { timeout, domainName, domainTld, queryServer })
 
 		if (!tld.whois) {
 			throw new Error(`TLD for "${domain}" not supported`)
@@ -158,7 +158,7 @@ const whoisDomain = async (domain, { host = null, timeout = 15000, follow = 2, r
 		}
 
 		try {
-			resultRaw = await whoisQuery({ host, query, timeout })
+			resultRaw = await queryServer({ host, query, timeout })
 			result = parseDomainWhois(domain, resultRaw, ignorePrivacy)
 		} catch (err) {
 			result = { error: err.message }
@@ -207,13 +207,13 @@ const whoisDomain = async (domain, { host = null, timeout = 15000, follow = 2, r
 	return results
 }
 
-const whoisIpOrAsn = async (query, { host = null, timeout = 15000, follow = 2, raw = false } = {}) => {
+const whoisIpOrAsn = async (query, { host = null, timeout = 15000, follow = 2, raw = false, queryServer = whoisQuery } = {}) => {
 	const type = net.isIP(query) ? 'ip' : 'asn'
 	query = String(query)
 
 	// find WHOIS server for IP
 	if (!host) {
-		let whoisResult = await whoisQuery({ host: 'whois.iana.org', query, timeout })
+		let whoisResult = await queryServer({ host: 'whois.iana.org', query, timeout })
 		whoisResult = parseSimpleWhois(whoisResult)
 
 		if (whoisResult.whois) {
@@ -237,7 +237,7 @@ const whoisIpOrAsn = async (query, { host = null, timeout = 15000, follow = 2, r
 			modifiedQuery = `+ a ${query}`
 		}
 
-		const rawResult = await whoisQuery({ host, query: modifiedQuery, timeout })
+		const rawResult = await queryServer({ host, query: modifiedQuery, timeout })
 		data = parseSimpleWhois(rawResult)
 
 		if (raw) {
